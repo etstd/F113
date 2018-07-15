@@ -18,6 +18,8 @@ module.exports = function pseudoComposeMap ( middleware ) {
       for ( const [ k, fn ] of middleware )  {
         result = await fn( ctx );
       };
+
+      return ctx;
     }
     catch ( error ) {
       throw error
