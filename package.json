@@ -1,7 +1,7 @@
 {
-  "name": "koa",
-  "version": "2.5.2",
-  "description": "Koa web app framework",
+  "name": "f113",
+  "version": "0.0.1",
+  "description": "f113 web app framework.",
   "main": "lib/application.js",
   "scripts": {
     "test": "jest",
