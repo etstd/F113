@@ -165,42 +165,53 @@
       return;
     };
 
-    const res = ctx.res;
+    const code = ctx.status,
+          res  = ctx.res;
+
     let body = ctx.body;
-    const code = ctx.status;
 
     // ignore body
     if (statuses.empty[code]) {
+
       // strip headers
       ctx.body = null;
+
       return res.end();
     };
 
     if ( ctx.method === 'HEAD' ) {
+
       if ( !res.headersSent && isJSON(body) ) {
         ctx.length = Buffer.byteLength(JSON.stringify(body));
-      }
+      };
+
       return res.end();
     };
 
     // status body
     if ( body === null || body === undefined ) {
+
       body = ctx.message || String(code);
+
       if (!res.headersSent) {
         ctx.type = 'text';
         ctx.length = Buffer.byteLength(body);
       }
+
       return res.end(body);
     };
 
     // responses
     if ( Buffer.isBuffer(body) || 'string' === typeof body ){
+
       res.end( body );
     }
     else if( Object.getPrototypeOf(body) === Stream.prototype ){
+
       body.pipe( res )
     }
     else { // else body is json object
+
       body = JSON.stringify(body);
 
       if ( !res.headersSent ) {
