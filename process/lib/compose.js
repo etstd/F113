@@ -1,11 +1,11 @@
 'use strict'
-module.exports = function pseudoComposeMap ( middleware ) {
+module.exports = function pseudoComposeMap ( middlewares ) {
   
-  if ( Object.getPrototypeOf( middleware ) !== Map.prototype ) {
+  if ( Object.getPrototypeOf( middlewares ) !== Map.prototype ) {
     throw new TypeError('Middleware stack must be an Map!')
   };
 
-  for ( const fn of middleware.values() ) {
+  for ( const fn of middlewares.values() ) {
     if ( typeof fn !== 'function' ) { 
       throw new TypeError( 'Middleware must be composed of functions!' )
     }
@@ -13,16 +13,16 @@ module.exports = function pseudoComposeMap ( middleware ) {
 
   return async function ( ctx ){
     try {
-      let result = null;
+      let lr = null; // lr -- local result. Data returned fn
 
-      for ( const [ k, fn ] of middleware )  {
-        result = await fn( ctx );
+      for ( const fn of middlewares.values() )  {
+        lr = await fn( ctx, ...( Array.isArray( lr ) ? lr : [ lr ] ) );
       };
 
       return ctx;
     }
     catch ( error ) {
-      throw error
+      throw error;
     };
   };
 };
