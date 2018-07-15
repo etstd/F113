@@ -88,7 +88,9 @@
       const fn = compose(this.middleware);
 
       if ( !this.events.listenerCount('error') ) {
-        this.events.on('error', this.onerror);
+        setImmediate(() => {
+          this.events.on('error', this.onerror);
+        })
       };
 
       const handleRequest = (req, res) => {
