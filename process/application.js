@@ -33,7 +33,7 @@
   //
   // ─── DEFINE OBJECT ────────────────────────────────────────────────────────
   //
-    const application = Object.create(Emitter.prototype);
+    const application = {};
 
   //
   // ─── METHOD LISTEN ────────────────────────────────────────────────────────
