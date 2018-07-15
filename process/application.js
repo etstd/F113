@@ -40,10 +40,10 @@
   //
     application.listen = function(...args) {
 
-      const server = http.createServer(this.callback());
+      const server = http.createServer(this.createCallback());
 
       return server.listen(...args);
-    }
+    };
   
   //
   // ─── METHOD TOJSON ────────────────────────────────────────────────────────
@@ -54,14 +54,14 @@
         'proxy',
         'env'
       ]);
-    }
+    };
     
   //
   // ─── METHOD INSPECT ───────────────────────────────────────────────────────
   //
     application.inspect = function() {
       return this.toJSON();
-    }
+    };
   
   //
   // ─── METHOD USE ───────────────────────────────────────────────────────────
@@ -82,12 +82,14 @@
     };
 
   //
-  // ─── METHOD CALLBACK ──────────────────────────────────────────────────────
+  // ─── METHOD CREATE CALLBACK ───────────────────────────────────────────────
   //
-    application.callback = function() {
+    application.createCallback = function() {
       const fn = compose(this.middleware);
 
-      if (!this.listenerCount('error')) this.on('error', this.onerror);
+      if ( !this.events.listenerCount('error') ) {
+        this.events.on('error', this.onerror);
+      };
 
       const handleRequest = (req, res) => {
         const ctx = this.createContext(req, res);
@@ -100,13 +102,19 @@
   //
   // ─── METHOD HANDLEREQUEST ─────────────────────────────────────────────────
   //
-    application.handleRequest = function(ctx, fn) {
-      const res = ctx.res;
-      res.statusCode = 404;
-      const onerror = err => ctx.onerror(err);
-      const handleResponse = () => respond(ctx);
-      onFinished(res, onerror);
-      return fn(ctx).then(handleResponse).catch(onerror);
+    application.handleRequest = async function( ctx, exec ) {
+      ctx.res.statusCode = 404;
+
+      onFinished(ctx.res, err => ctx.onerror(err));
+      
+      try {
+        return respond(await exec(ctx));
+      }
+      catch ( error ) {
+        ctx.onerror( error )
+        // this.events.emit('error', ctx, error);
+      };
+      
     };
 
   //
@@ -131,9 +139,10 @@
   //
   // ─── METHOD ONERROR ───────────────────────────────────────────────────────
   //
-    application.onerror = function(err) {
-      if (!(err instanceof Error)){
-         throw new TypeError(util.format('non-error thrown: %j', err));
+    application.onerror = function( err ) {
+
+      if( Object.getPrototypeOf( err ) !== Error.prototype ){
+        throw new TypeError(util.format('non-error thrown: %j', err));
       };
   
       if (404 == err.status || err.expose || this.silent) {
@@ -150,13 +159,13 @@
 //   :::::: F U N C T I O N   R E S P O N D : :  :   :    :     :             :
 // ────────────────────────────────────────────────────────────────────────────
 //
-  function respond(ctx) {
+  function respond( ctx ) {
     // allow bypassing koa
-    if (false === ctx.respond) return;
+    if ( ctx.respond === false || !ctx.writable ){
+      return;
+    };
 
     const res = ctx.res;
-    if (!ctx.writable) return;
-
     let body = ctx.body;
     const code = ctx.status;
 
@@ -165,37 +174,42 @@
       // strip headers
       ctx.body = null;
       return res.end();
-    }
+    };
 
-    if ('HEAD' == ctx.method) {
-      if (!res.headersSent && isJSON(body)) {
+    if ( ctx.method === 'HEAD' ) {
+      if ( !res.headersSent && isJSON(body) ) {
         ctx.length = Buffer.byteLength(JSON.stringify(body));
       }
       return res.end();
-    }
+    };
 
     // status body
-    if (null == body) {
+    if ( body === null || body === undefined ) {
       body = ctx.message || String(code);
       if (!res.headersSent) {
         ctx.type = 'text';
         ctx.length = Buffer.byteLength(body);
       }
       return res.end(body);
-    }
+    };
 
     // responses
-    if (Buffer.isBuffer(body)) return res.end(body);
-    if ('string' == typeof body) return res.end(body);
-    if (body instanceof Stream) return body.pipe(res);
-
-    // body: json
-    body = JSON.stringify(body);
-    if (!res.headersSent) {
-      ctx.length = Buffer.byteLength(body);
+    if ( Buffer.isBuffer(body) || 'string' === typeof body ){
+      res.end( body );
     }
-    res.end(body);
-  }
+    else if( Object.getPrototypeOf(body) === Stream.prototype ){
+      body.pipe( res )
+    }
+    else { // else body is json object
+      body = JSON.stringify(body);
+
+      if ( !res.headersSent ) {
+        ctx.length = Buffer.byteLength(body);
+      };
+
+      res.end(body);
+    }
+  };
 
 //
 // ────────────────────────────────────────────────────────────────────────────
@@ -215,6 +229,9 @@
       },
       env: {
         value: process.env.NODE_ENV || 'development'
+      },
+      events: {
+        value: Object.create( Emitter.prototype )
       },
       context: {
         value: Object.create( context )
