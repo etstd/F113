@@ -1,7 +1,7 @@
 > Благодаря сделаным изменениям middleware для koajs 
 > для проекта F113 не работают
 > 
-> Это связано с изменением middleware<Array> -> middleware<Map>
+> Это связано с изменением middleware \<Array> --> middleware\<Map>
 > И изменением функции compose под капотом
 
 
